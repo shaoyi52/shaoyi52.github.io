@@ -1,0 +1,39 @@
+
+一、本地仓库初始化
+git init 
+
+二、添加所有文件
+git add . 
+
+三、将add的文件commit到本地仓库
+git commit -m "注释语句" 
+
+四、本地的仓库关联远程仓库
+git remote add origin https://github.com/shaoyi52/days_blog.git 
+【提示出錯信息：fatal: remote origin already exists. 解決辦法如下：
+ 1、先輸入$ git remote rm origin
+ 2、再輸入$ git remote add 
+】
+
+五、上传之前要先拉取远程仓库文件
+git pull origin master 
+
+六、上传到远程仓库
+git push -u origin master 
+
+七、git branch -a 查看当前所有分支
+
+
+本地更新
+
+正规流程
+一、git status（查看本地分支文件信息，确保更新时不产生冲突）
+
+二、git checkout – [file name] （若文件有修改，可以还原到最初状态; 若文件需要更新到服务器上，应该先merge到服务器，再更新到本地）
+
+三、git branch（查看当前分支情况）
+
+四、git checkout remote branch (若分支为本地分支，则需切换到服务器的远程分支)
+
+五、git pull
+
