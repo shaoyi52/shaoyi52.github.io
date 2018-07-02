@@ -12,6 +12,13 @@ weibo_username: shaoyi52      # the footer woule be auto-updated.
 # 
 header-img: img/home-bg.jpg
 
+# Featured Tags
+featured-tags: true                     # whether or not using Feature-Tags
+featured-condition-size: 1              # A tag will be featured if the size of it is more than this condition value
+
+
+
+
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
 sidebar-about-description: "写写代码，做做设计，<br>离开世界之前，一切都是过程"
