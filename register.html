@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<!--本DEMO 基于《HUAWEI HiLink APP JSAPI接口文档 v1.8.6.docx》进行的开发 -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>HUAWEI HiLink H5 DEMO</title>
+	<link rel="stylesheet" type="text/css" href="./assets/css/style.css">
+    <script src="./assets/js/flexible.js"></script>
+	<script src="./assets/js/vue.js"></script>
+	<title>设备注册</title>
+</head>
+<body>
+<div id="app">
+    <h1>发现可旺</h1>
+    <div v-if="seen">
+        <p v-html='message' class="msg"></p>
+    </div>
+    <img class="pic" @click='showMsg()' src="./assets/img/dog.png" />
+    <p>正在注册设备...</p>
+    <img class="loading" src="./assets/img/loading.png" />
+     
+    <div v-if="dialog" class="js_dialog dialog" id="iosDialog2" >
+            <div class="weui-mask"></div>
+            <div class="weui-dialog">
+                <div class="weui-dialog__bd">设备注册超时</div>
+                <div class="weui-dialog__ft">
+                    <a href="javascript:;" @click="closePage()" class="weui-dialog__btn weui-dialog__btn_primary">确认</a>
+                </div>
+            </div>
+        </div>
+</div>
+
+<script>
+	vm=new Vue({
+	    el: '#app',
+	    data: {
+            count:0,
+            dialog:false,
+            seen:false,
+            message: "",
+            deviceInfo:null,           
+	    },
+	   
+        created: function () {
+            window['eventCallback']=function(event){
+                vm[window['callback']](event);
+            }
+           
+        },
+        mounted: function () {
+            this.getSystemInfo();            
+        },
+        methods: {
+            showMsg:function(){
+                this.count=this.count+1;
+                console.log(this.count);
+                if(this.count%3==0){
+                    this.seen=true;
+                }
+            },	       
+            getSystemInfo:function(){//获取手机信息
+                
+                window['callback']='systemInfoCallBack'
+                window.hilink.getSystemInfoSync('eventCallback')
+            },
+            systemInfoCallBack:function(res){
+                let systemInfo=JSON.parse(res)
+                this.message="getSystemInfoSync---"+res+"<br/>";
+                if(systemInfo&&systemInfo.platform=='Android'){
+                    this.getCurrentUnregisteredDevice();
+                }else if(systemInfo&&systemInfo.platform=='iOS'){//ios
+                    //this.message="ios"+"<br/>"
+                    this.onBluetoothDeviceFound();
+                }else{
+                    this.dialog=true;
+                }
+            },
+
+            getCurrentUnregisteredDevice:function(){//获取未注册蓝牙设备
+                window['callback']='unRegisteredDeviceInfoCallback'
+                window.hilink.getCurrentUnregisteredDevice('eventCallback')				
+            },
+            unRegisteredDeviceInfoCallback:function(res){
+                this.message=this.message+"getCurrentUnregisteredDevice---"+res+"<br/>";
+                if(res){
+                    let deviceInfo=JSON.parse(res)
+                    this.deviceInfo=deviceInfo;
+                    this.createBLEConnection(deviceInfo.deviceId)
+                }else{
+                    this.dialog=true;
+                }
+            },
+            createBLEConnection:function(deviceId){//建立蓝牙链接
+                this.message=this.message+"createBLEConnection---deviceId:"+deviceId+"<br/>";
+                window.hilink.createBLEConnection(deviceId)
+                this.registerBleDevice();
+            },
+           
+            registerBleDevice:function(){//云端注册蓝牙设备
+                let deviceInfo=this.deviceInfo
+                this.message="registerBleDevice---:"+deviceInfo.localName+"<br/>";
+                if(deviceInfo){
+                  window['callback']='registerBleDeviceCallBack'  ;
+                  //window.hilink.registerBleDevice(deviceInfo.localName, "1.0.1", "1.0.1", "eventCallback")  
+                  window.hilink.registerBleDevice(deviceInfo.deviceId, "1.0.1", "1.0.1", "eventCallback")  
+                }else{
+                    this.dialog=true;
+                }
+                
+                //sn:MAC地址或者IMEI号等信息来填充
+                //fwv:蓝牙设备固件版本
+                //hwv:蓝牙设备硬件版本
+            },
+            registerBleDeviceCallBack:function(res){
+                if(res&&res=='0, 90001, 90012'){
+                  this.dialog=true;  
+                }
+                this.message="register"+res;
+            },
+
+
+            onBluetoothDeviceFound:function(){//监听寻找到新设备的事件
+               //this.platform= window.hilink;
+              /* window['timeId']=setTimeout(function(){
+                    vm.dialog=true;
+                },5000)*/                
+                window['callback']='bluetoothDeviceFoundCallBack'                
+                window.hilink.onBluetoothDeviceFound('eventCallback')
+                window.hilink.startBluetoothDevicesDiscovery ([], false, 0)
+            },
+
+            bluetoothDeviceFoundCallBack:function(res){ 
+                this.message="bluetoothDeviceFound:"+res+"<br/>"; 
+                //let deviceInfo=JSON.parse(res) ;
+                if(res){
+                    let deviceInfo=JSON.parse(res) ;                     
+                    if(deviceInfo.localName.indexOf('blEY.LB')>-1||deviceInfo.localName.indexOf('blEP.LA')>-1){
+                        hilink.stopBluetoothDevicesDiscovery();
+                        this.message=this.message+"bluetoothDeviceFound---blEY.LB:"+res+"<br/>";
+                        /*let uuidStr=deviceInfo.uuid.split('').reverse().join('');//翻转
+                        let uuid=uuidStr.slice(0,4)+'-'+uuidStr.slice(4,8)+'-'+uuidStr.slice(8,12)+'-'+uuidStr.slice(12,16);//格式化MAC 地址
+                        deviceInfo['uuid']=uuid;
+                        deviceInfo['deviceId']=uuid;*/
+                        this.deviceInfo=deviceInfo;
+                        clearTimeout(window['timeId']);
+                        window.hilink.createBLEConnection(deviceInfo.deviceId)
+                        //window.hilink.createBLEConnection(uuid)
+                        let _this=this;
+                        setTimeout(function()  {
+                        _this.registerBleDevice();
+                        },1000)
+                        //this.registerBleDevice();
+                    }
+                    /*deviceList.forEach(item => {
+                        if(item.localName.indexOf('blEY.LB')>-1||item.localName.indexOf('blEP.LA')>-1){
+                            this.deviceInfo=item;
+                        }
+                    });*/
+                }  
+                             
+            },
+
+            closePage:function(){//关闭当前页
+                this.dialog=true;
+                window.hilink. finishDeviceActivity()
+            }
+            
+        },
+	})
+</script>
+
+
+</body>
+</html>
